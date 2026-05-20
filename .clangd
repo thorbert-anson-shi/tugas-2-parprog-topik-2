@@ -1,0 +1,8 @@
+CompileFlags:
+  Add:
+    [
+      "-xcuda",
+      "--cuda-path=/opt/cuda",
+      "-I/opt/cuda/include",
+      "-I/opt/cuda/include/cccl",
+    ]
