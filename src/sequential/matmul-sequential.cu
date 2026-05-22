@@ -9,13 +9,15 @@
 #include <time.h>
 
 __global__ void seq_square_matmul(float *a, float *b, float *c, int N) {
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      float sum = 0.0f;
-      for (int k = 0; k < N; k++) {
-        sum += a[i * N + k] * b[k * N + j];
+  if (threadIdx.x == 0) {
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < N; j++) {
+        float sum = 0.0f;
+        for (int k = 0; k < N; k++) {
+          sum += a[i * N + k] * b[k * N + j];
+        }
+        c[i * N + j] = sum;
       }
-      c[i * N + j] = sum;
     }
   }
 }

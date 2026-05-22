@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TILE_WIDTH 20
+#define TILE_WIDTH 32
 
 __global__ void square_matmul(float *a, float *b, float *c, int N) {
   int bx = blockIdx.x;
