@@ -72,9 +72,7 @@ int main() {
                cudaMemcpyDeviceToHost);
 
     if (i % verification_gap == 0) {
-      if (!verify_matrix_equality(answer, answer_key, num_elements)) {
-        printf("Answer is incorrect");
-      }
+      verify_matrix_equality(answer, answer_key, num_elements);
     }
 
     cudaFree(d_a);

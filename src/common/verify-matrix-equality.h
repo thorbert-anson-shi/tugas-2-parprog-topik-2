@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-bool verify_matrix_equality(float *a, float *b, int len);
+void verify_matrix_equality(float *a, float *b, int len);
 
 #ifdef __cplusplus
 }
