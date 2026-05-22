@@ -1,5 +1,5 @@
-#include "gen-rand-matrix.h"
-#include "sorted-dynamic-array.h"
+#include "../common/gen-rand-matrix.h"
+#include "../common/sorted-dynamic-array.h"
 #include <cublas_v2.h>
 #include <math.h>
 #include <stdio.h>
