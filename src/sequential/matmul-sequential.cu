@@ -8,34 +8,16 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TILE_WIDTH 20
-
-__global__ void square_matmul(float *a, float *b, float *c, int N) {
-  int bx = blockIdx.x;
-  int by = blockIdx.y;
-
-  int tx = threadIdx.x;
-  int ty = threadIdx.y;
-
-  int i = by * blockDim.y + ty;
-  int j = bx * blockDim.x + tx;
-
-  __shared__ float sh_A[TILE_WIDTH][TILE_WIDTH];
-  __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
-
-  float value = 0;
-  for (int phase = 0; phase < N / TILE_WIDTH; phase++) {
-    sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
-    sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
-    __syncthreads();
-
-    for (int k = 0; k < TILE_WIDTH; k++) {
-      value += sh_A[ty][k] * sh_B[k][tx];
+__global__ void seq_square_matmul(float *a, float *b, float *c, int N) {
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      float sum = 0.0f;
+      for (int k = 0; k < N; k++) {
+        sum += a[i * N + k] * b[k * N + j];
+      }
+      c[i * N + j] = sum;
     }
-    __syncthreads();
   }
-
-  c[i * N + j] = value;
 }
 
 int main() {
@@ -75,17 +57,13 @@ int main() {
     cudaMalloc(&d_b, num_elements * sizeof(float));
     cudaMalloc(&d_c, num_elements * sizeof(float));
 
-    int grid_size = (n + TILE_WIDTH - 1) / TILE_WIDTH;
-    dim3 gridDim(grid_size, grid_size);
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
-
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     cudaMemcpy(d_a, h_a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
-    square_matmul<<<gridDim, blockDim>>>(d_a, d_b, d_c, n);
+    seq_square_matmul<<<1, 1>>>(d_a, d_b, d_c, n);
 
     float *answer = (float *)malloc(num_elements * sizeof(float));
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
