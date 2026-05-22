@@ -5,7 +5,7 @@ SRC_DIR := src
 
 COMMON_SRC := $(SRC_DIR)/common/gen-rand-matrix.c \
               $(SRC_DIR)/common/sorted-dynamic-array.c \
-              $(SRC_DIR)/common/create-answer-key.c
+              $(SRC_DIR)/common/create-answer-key.cu
 
 .PHONY: all clean
 

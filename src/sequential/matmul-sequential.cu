@@ -40,7 +40,7 @@ int main() {
 
   gen_rand_sq_matrix(a, b, num_elements);
 
-  float *answer_key = (float *)malloc(sizeof(float));
+  float *answer_key = (float *)malloc(num_elements * sizeof(float));
   create_answer_key(answer_key, n);
 
   // Iterate n times for consistency
