@@ -1,54 +1,30 @@
 #include "gen_rand_matrix.h"
 #include "sorted_dynamic_array.h"
+#include <cublas_v2.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-#define TILE_WIDTH 20
-
-__global__ void square_matmul(float *a, float *b, float *c, int N) {
-  int bx = blockIdx.x;
-  int by = blockIdx.y;
-
-  int tx = threadIdx.x;
-  int ty = threadIdx.y;
-
-  int i = by * blockDim.y + ty;
-  int j = bx * blockDim.x + tx;
-
-  __shared__ float sh_A[TILE_WIDTH][TILE_WIDTH];
-  __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
-
-  float value = 0;
-  for (int phase = 0; phase < N / TILE_WIDTH; phase++) {
-    sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
-    sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
-    __syncthreads();
-
-    for (int k = 0; k < TILE_WIDTH; k++) {
-      value += sh_A[ty][k] * sh_B[k][tx];
-    }
-    __syncthreads();
-  }
-
-  c[i * N + j] = value;
-}
 
 int main() {
   int num_iter;
   scanf("%d", &num_iter);
 
   int n = 100;
-  int num_elements = pow(n, 2);
+  int num_elements = n * n;
 
-  double *times = (double *)malloc(n * sizeof(float));
+  double *times = (double *)malloc(n * sizeof(double));
 
-  // For now, all elements are stored in CPU memory
   float *a = (float *)malloc(num_elements * sizeof(float));
   float *b = (float *)malloc(num_elements * sizeof(float));
 
   gen_rand_sq_matrix(a, b, num_elements);
+
+  cublasHandle_t handle;
+  cublasCreate(&handle);
+
+  float alpha = 1.0f;
+  float beta = 0.0f;
 
   // Iterate n times for consistency
   for (int i = 0; i < num_iter; i++) {
@@ -58,15 +34,10 @@ int main() {
     memcpy(h_a, a, num_elements * sizeof(float));
     memcpy(h_b, b, num_elements * sizeof(float));
 
-    // Move these bad boys to GPU memory
     float *d_a, *d_b, *d_c;
     cudaMalloc(&d_a, num_elements * sizeof(float));
     cudaMalloc(&d_b, num_elements * sizeof(float));
     cudaMalloc(&d_c, num_elements * sizeof(float));
-
-    int grid_size = (n + TILE_WIDTH - 1) / TILE_WIDTH;
-    dim3 gridDim(grid_size, grid_size);
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
 
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
@@ -74,18 +45,21 @@ int main() {
     cudaMemcpy(d_a, h_a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
-    square_matmul<<<gridDim, blockDim>>>(d_a, d_b, d_c, n);
+    // cuBLAS is column-major; for row-major A, B we swap operands
+    // Computes C (col-major) = B (col-major) * A (col-major)
+    // which yields C_row = A_row * B_row
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, d_b, n, d_a,
+                n, &beta, d_c, n);
 
-    float *answer = (float *)malloc(num_elements * sizeof(float));
-    cudaMemcpy(answer, d_c, num_elements * sizeof(float),
-               cudaMemcpyDeviceToHost);
+    float *h_c = (float *)malloc(num_elements * sizeof(float));
+    cudaMemcpy(h_c, d_c, num_elements * sizeof(float), cudaMemcpyDeviceToHost);
 
     cudaFree(d_a);
     cudaFree(d_b);
     cudaFree(d_c);
     free(h_a);
     free(h_b);
-    free(answer);
+    free(h_c);
 
     clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -94,6 +68,8 @@ int main() {
 
     insert_sorted(times, i, elapsed_ms);
   }
+
+  cublasDestroy(handle);
 
   print_stats(times, num_iter);
 }
