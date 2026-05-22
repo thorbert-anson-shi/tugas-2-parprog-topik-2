@@ -8,14 +8,16 @@
 
 int main() {
   int num_iter;
-  scanf("Number of iterations: %d\n", &num_iter);
+  printf("Number of iterations: ");
+  scanf("%d", &num_iter);
 
   int n;
-  scanf("Matrix size: %d\n", &n);
+  printf("Matrix size: ");
+  scanf("%d", &n);
 
   int num_elements = n * n;
 
-  double *times = (double *)malloc(n * sizeof(double));
+  double *times = (double *)malloc(num_iter * sizeof(double));
 
   float *a = (float *)malloc(num_elements * sizeof(float));
   float *b = (float *)malloc(num_elements * sizeof(float));

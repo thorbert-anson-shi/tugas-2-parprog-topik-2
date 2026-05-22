@@ -37,14 +37,16 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
 
 int main() {
   int num_iter;
-  scanf("Number of iterations: %d\n", &num_iter);
+  printf("Number of iterations: ");
+  scanf("%d", &num_iter);
 
   int n;
-  scanf("Matrix size: %d\n", &n);
+  printf("Matrix size: ");
+  scanf("%d", &n);
 
-  int num_elements = pow(n, 2);
+  int num_elements = n * n;
 
-  double *times = (double *)malloc(n * sizeof(double));
+  double *times = (double *)malloc(num_iter * sizeof(double));
 
   // For now, all elements are stored in CPU memory
   float *a = (float *)malloc(num_elements * sizeof(float));
