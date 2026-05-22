@@ -51,20 +51,18 @@ double get_trimmed_mean(double *times, int trimmedFromTails, int arr_len) {
 double get_best(double *times) { return times[0]; }
 double get_worst(double *times, int arr_len) { return times[arr_len - 1]; }
 
-float ms_to_s(double time_in_ms) { return time_in_ms / 1e3; }
-
 void print_stats(double *times, int arr_len) {
-  float mean = ms_to_s(get_mean(times, arr_len));
-  float trimmedMean = ms_to_s(get_trimmed_mean(times, 10, arr_len));
-  float p95 = ms_to_s(get_percentile(times, arr_len, 95));
-  float p50 = ms_to_s(get_percentile(times, arr_len, 50));
-  float worst = ms_to_s(get_best(times));
-  float best = ms_to_s(get_worst(times, arr_len));
+  double mean = get_mean(times, arr_len);
+  double trimmedMean = get_trimmed_mean(times, 10, arr_len);
+  double p95 = get_percentile(times, arr_len, 95);
+  double p50 = get_percentile(times, arr_len, 50);
+  double best = get_best(times);
+  double worst = get_worst(times, arr_len);
 
-  printf("mean: %.3f\n", mean);
-  printf("trimmed: %.3f\n", trimmedMean);
-  printf("p95: %.3f\n", p95);
-  printf("p50: %.3f\n", p50);
-  printf("worst: %.3f\n", worst);
-  printf("best: %.3f\n", best);
+  printf("mean: %.6f ms\n", mean);
+  printf("trimmed: %.6f ms\n", trimmedMean);
+  printf("p95: %.6f ms\n", p95);
+  printf("p50: %.6f ms\n", p50);
+  printf("worst: %.6f ms\n", worst);
+  printf("best: %.6f ms\n", best);
 }

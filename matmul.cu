@@ -42,7 +42,7 @@ int main() {
   int n = 100;
   int num_elements = pow(n, 2);
 
-  double *times = (double *)malloc(n * sizeof(float));
+  double *times = (double *)malloc(n * sizeof(double));
 
   // For now, all elements are stored in CPU memory
   float *a = (float *)malloc(num_elements * sizeof(float));
