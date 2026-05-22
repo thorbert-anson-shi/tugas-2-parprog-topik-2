@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void create_answer_key(float *answer_key, int n);
+void create_answer_key(float *a, float *b, float *answer_key, int n);
 
 #ifdef __cplusplus
 }
