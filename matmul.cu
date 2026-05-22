@@ -1,5 +1,7 @@
 #include "gen-rand-matrix.h"
 #include "sorted-dynamic-array.h"
+#include "verify-matrix-equality.h"
+#include <cublas_v2.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,6 +46,7 @@ int main() {
   printf("Matrix size: ");
   scanf("%d", &n);
 
+  int verification_gap = num_iter / 10;
   int num_elements = n * n;
 
   double *times = (double *)malloc(num_iter * sizeof(double));
@@ -53,6 +56,23 @@ int main() {
   float *b = (float *)malloc(num_elements * sizeof(float));
 
   gen_rand_sq_matrix(a, b, num_elements);
+
+  // Create answer key to verify correctness
+  cublasHandle_t handle;
+  cublasCreate(&handle);
+  float alpha = 1.0f;
+  float beta = 0.0f;
+
+  float *t_a, *t_b, *t_c;
+  cudaMalloc(&t_a, num_elements * sizeof(float));
+  cudaMalloc(&t_b, num_elements * sizeof(float));
+  cudaMalloc(&t_c, num_elements * sizeof(float));
+
+  cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, t_b, n, t_a, n,
+              &beta, t_c, n);
+  float *answer_key = (float *)malloc(num_elements * sizeof(float));
+  cudaMemcpy(answer_key, t_c, num_elements * sizeof(float),
+             cudaMemcpyDeviceToHost);
 
   // Iterate n times for consistency
   for (int i = 0; i < num_iter; i++) {
@@ -83,6 +103,12 @@ int main() {
     float *answer = (float *)malloc(num_elements * sizeof(float));
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
+
+    if (i % verification_gap == 0) {
+      if (!verify_matrix_equality(answer, answer_key, num_elements)) {
+        printf("Answer is incorrect");
+      }
+    }
 
     cudaFree(d_a);
     cudaFree(d_b);
