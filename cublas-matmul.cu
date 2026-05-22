@@ -1,5 +1,5 @@
-#include "gen_rand_matrix.h"
-#include "sorted_dynamic_array.h"
+#include "gen-rand-matrix.h"
+#include "sorted-dynamic-array.h"
 #include <cublas_v2.h>
 #include <math.h>
 #include <stdio.h>
@@ -8,9 +8,11 @@
 
 int main() {
   int num_iter;
-  scanf("%d", &num_iter);
+  scanf("Number of iterations: %d\n", &num_iter);
 
-  int n = 100;
+  int n;
+  scanf("Matrix size: %d\n", &n);
+
   int num_elements = n * n;
 
   double *times = (double *)malloc(n * sizeof(double));
