@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void verify_matrix_equality(float *a, float *b, int len) {
   for (int i = 0; i < len; i++) {

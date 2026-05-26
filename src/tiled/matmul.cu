@@ -24,9 +24,19 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
   __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
 
   float value = 0;
-  for (int phase = 0; phase < N / TILE_WIDTH; phase++) {
-    sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
-    sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
+  for (int phase = 0; phase < (N + TILE_WIDTH - 1) / TILE_WIDTH; phase++) {
+    if (phase * TILE_WIDTH + tx > N) {
+      sh_A[ty][tx] = 0;
+    } else {
+      sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
+    }
+
+    if (phase * TILE_WIDTH + ty < N) {
+      sh_B[ty][tx] = 0;
+    } else {
+      sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
+    }
+
     __syncthreads();
 
     for (int k = 0; k < TILE_WIDTH; k++) {
