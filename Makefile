@@ -9,7 +9,7 @@ COMMON_SRC := $(SRC_DIR)/common/gen-rand-matrix.c \
 
 .PHONY: all clean
 
-all: $(BUILD_DIR)/matmul-tiled $(BUILD_DIR)/matmul-tiled-global $(BUILD_DIR)/matmul-cublas $(BUILD_DIR)/matmul-sequential
+all: $(BUILD_DIR)/matmul-tiled $(BUILD_DIR)/matmul-naive $(BUILD_DIR)/matmul-cublas $(BUILD_DIR)/matmul-sequential
 
 
 $(BUILD_DIR):
@@ -19,7 +19,7 @@ $(BUILD_DIR)/matmul-tiled: $(SRC_DIR)/tiled/matmul.cu $(COMMON_SRC) \
                             $(SRC_DIR)/common/verify-matrix-equality.c | $(BUILD_DIR)
 	$(NVCC) $(NVCC_FLAGS) -o $@ $^
 
-$(BUILD_DIR)/matmul-tiled-global: $(SRC_DIR)/tiled/matmul-global.cu $(COMMON_SRC) \
+$(BUILD_DIR)/matmul-naive: $(SRC_DIR)/naive/matmul-global.cu $(COMMON_SRC) \
                             $(SRC_DIR)/common/verify-matrix-equality.c | $(BUILD_DIR)
 	$(NVCC) $(NVCC_FLAGS) -o $@ $^
 
@@ -32,4 +32,4 @@ $(BUILD_DIR)/matmul-cublas: $(SRC_DIR)/cublas/matmul-cublas.cu $(COMMON_SRC) | $
 
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -f matmul-tiled matmul-tiled-global matmul-cublas matmul-sequential 
+	rm -f matmul-tiled matmul-naive matmul-cublas matmul-sequential 
