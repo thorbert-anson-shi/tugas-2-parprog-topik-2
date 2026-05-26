@@ -25,13 +25,13 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
 
   float value = 0;
   for (int phase = 0; phase < (N + TILE_WIDTH - 1) / TILE_WIDTH; phase++) {
-    if (phase * TILE_WIDTH + tx >= N && i >= N) {
+    if (phase * TILE_WIDTH + tx >= N || i >= N) {
       sh_A[ty][tx] = 0.0f;
     } else {
       sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
     }
 
-    if (phase * TILE_WIDTH + ty >= N && j >= N) {
+    if (phase * TILE_WIDTH + ty >= N || j >= N) {
       sh_B[ty][tx] = 0.0f;
     } else {
       sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
@@ -45,7 +45,9 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
     __syncthreads();
   }
 
-  c[i * N + j] = value;
+  if (i < N && j < N) {
+    c[i * N + j] = value;
+  }
 }
 
 int main() {
@@ -96,6 +98,8 @@ int main() {
     cudaMemcpy(d_b, h_b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
     square_matmul<<<gridDim, blockDim>>>(d_a, d_b, d_c, n);
+
+    cudaDeviceSynchronize();
 
     float *answer = (float *)malloc(num_elements * sizeof(float));
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
