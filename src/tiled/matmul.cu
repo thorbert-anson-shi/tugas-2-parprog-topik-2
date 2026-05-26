@@ -25,14 +25,14 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
 
   float value = 0;
   for (int phase = 0; phase < (N + TILE_WIDTH - 1) / TILE_WIDTH; phase++) {
-    if (phase * TILE_WIDTH + tx >= N) {
-      sh_A[ty][tx] = 0;
+    if (phase * TILE_WIDTH + tx >= N && i >= N) {
+      sh_A[ty][tx] = 0.0f;
     } else {
       sh_A[ty][tx] = a[N * i + phase * TILE_WIDTH + tx];
     }
 
-    if (phase * TILE_WIDTH + ty >= N) {
-      sh_B[ty][tx] = 0;
+    if (phase * TILE_WIDTH + ty >= N && j >= N) {
+      sh_B[ty][tx] = 0.0f;
     } else {
       sh_B[ty][tx] = b[(phase * TILE_WIDTH + ty) * N + j];
     }
