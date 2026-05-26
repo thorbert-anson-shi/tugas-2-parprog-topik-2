@@ -36,51 +36,35 @@ int main() {
 
   double *times = (double *)malloc(num_iter * sizeof(double));
 
-  // For now, all elements are stored in CPU memory
   float *a = (float *)malloc(num_elements * sizeof(float));
   float *b = (float *)malloc(num_elements * sizeof(float));
+  float *answer = (float *)malloc(num_elements * sizeof(float));
+
+  float *d_a, *d_b, *d_c;
+  cudaMalloc(&d_a, num_elements * sizeof(float));
+  cudaMalloc(&d_b, num_elements * sizeof(float));
+  cudaMalloc(&d_c, num_elements * sizeof(float));
 
   gen_rand_sq_matrix(a, b, num_elements);
+
+  cudaMemcpy(d_a, a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_b, b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
   float *answer_key = (float *)malloc(num_elements * sizeof(float));
   create_answer_key(a, b, answer_key, n);
 
-  // Iterate n times for consistency
   for (int i = 0; i < num_iter; i++) {
-    float *h_a = (float *)malloc(num_elements * sizeof(float));
-    float *h_b = (float *)malloc(num_elements * sizeof(float));
-
-    memcpy(h_a, a, num_elements * sizeof(float));
-    memcpy(h_b, b, num_elements * sizeof(float));
-
-    // Move these bad boys to GPU memory
-    float *d_a, *d_b, *d_c;
-    cudaMalloc(&d_a, num_elements * sizeof(float));
-    cudaMalloc(&d_b, num_elements * sizeof(float));
-    cudaMalloc(&d_c, num_elements * sizeof(float));
-
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    cudaMemcpy(d_a, h_a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, h_b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
-
     seq_square_matmul<<<1, 1>>>(d_a, d_b, d_c, n);
 
-    float *answer = (float *)malloc(num_elements * sizeof(float));
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
 
     if (i % verification_gap == 0) {
       verify_matrix_equality(answer, answer_key, num_elements);
     }
-
-    cudaFree(d_a);
-    cudaFree(d_b);
-    cudaFree(d_c);
-    free(h_a);
-    free(h_b);
-    free(answer);
 
     clock_gettime(CLOCK_MONOTONIC, &end);
 
@@ -89,6 +73,14 @@ int main() {
 
     insert_sorted(times, i, elapsed_ms);
   }
+
+  cudaFree(d_a);
+  cudaFree(d_b);
+  cudaFree(d_c);
+  free(a);
+  free(b);
+  free(answer);
+  free(answer_key);
 
   print_stats(times, num_iter);
 }
