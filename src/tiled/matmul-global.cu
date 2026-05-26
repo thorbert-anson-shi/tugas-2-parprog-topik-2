@@ -20,18 +20,13 @@ __global__ void square_matmul(float *a, float *b, float *c, int N) {
   int i = by * blockDim.y + ty;
   int j = bx * blockDim.x + tx;
 
-  float sh_A[TILE_WIDTH][TILE_WIDTH];
-  float sh_B[TILE_WIDTH][TILE_WIDTH];
-
-  float value = 0;
-  for (int phase = 0; phase < (N + TILE_WIDTH - 1) / TILE_WIDTH; phase++) {
-    for (int k = 0; k < TILE_WIDTH; k++) {
-      value += sh_A[ty][k] * sh_B[k][tx];
-    }
-    __syncthreads();
-  }
-
   if (i < N && j < N) {
+    float value = 0;
+
+    for (int k = 0; k < N; k++) {
+      value += a[i * N + k] * b[k * N + j];
+    }
+
     c[i * N + j] = value;
   }
 }
