@@ -1,12 +1,10 @@
-#include "../common/create-answer-key.h"
 #include "../common/gen-rand-matrix.h"
 #include "../common/sorted-dynamic-array.h"
-#include "../common/verify-matrix-equality.h"
 #include <cublas_v2.h>
+#include <cuda_runtime.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 int main() {
   int num_iter;
@@ -17,7 +15,6 @@ int main() {
   printf("Matrix size: ");
   scanf("%d", &n);
 
-  int verification_gap = num_iter / 10;
   int num_elements = n * n;
 
   double *times = (double *)malloc(num_iter * sizeof(double));
@@ -42,9 +39,12 @@ int main() {
   float alpha = 1.0f;
   float beta = 0.0f;
 
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
   for (int i = 0; i < num_iter; i++) {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    cudaEventRecord(start);
 
     cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, d_b, n, d_a,
                 n, &beta, d_c, n);
@@ -52,13 +52,17 @@ int main() {
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
 
-    double elapsed_ms = (end.tv_sec - start.tv_sec) * 1000.0 +
-                        (end.tv_nsec - start.tv_nsec) / 1000000.0;
+    float elapsed_ms;
+    cudaEventElapsedTime(&elapsed_ms, start, stop);
 
-    insert_sorted(times, i, elapsed_ms);
+    insert_sorted(times, i, (double)elapsed_ms);
   }
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
 
   cublasDestroy(handle);
 

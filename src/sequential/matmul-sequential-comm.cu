@@ -1,33 +1,24 @@
-#include "../common/create-answer-key.h"
 #include "../common/gen-rand-matrix.h"
 #include "../common/sorted-dynamic-array.h"
-#include "../common/verify-matrix-equality.h"
-#include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TILE_WIDTH 32
-
-__global__ void square_matmul(float *a, float *b, float *c, int N) {
-  int bx = blockIdx.x;
-  int by = blockIdx.y;
-
-  int tx = threadIdx.x;
-  int ty = threadIdx.y;
-
-  int i = by * blockDim.y + ty;
-  int j = bx * blockDim.x + tx;
-
-  if (i < N && j < N) {
-    float value = 0;
-
-    for (int k = 0; k < N; k++) {
-      value += a[i * N + k] * b[k * N + j];
+// Dummy kernel: same global memory access pattern as sequential matmul,
+// but no multiply-accumulate. Single thread, pure global memory reads.
+__global__ void dummy_seq_matmul(float *a, float *b, float *c, int N) {
+  if (threadIdx.x == 0) {
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < N; j++) {
+        float sum = 0.0f;
+        for (int k = 0; k < N; k++) {
+          sum += a[i * N + k] + b[k * N + j];
+        }
+        c[i * N + j] = sum;
+      }
     }
-
-    c[i * N + j] = value;
   }
 }
 
@@ -40,7 +31,6 @@ int main() {
   printf("Matrix size: ");
   scanf("%d", &n);
 
-  int verification_gap = num_iter / 10;
   int num_elements = n * n;
 
   double *times = (double *)malloc(num_iter * sizeof(double));
@@ -59,13 +49,6 @@ int main() {
   cudaMemcpy(d_a, a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
   cudaMemcpy(d_b, b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
-  float *answer_key = (float *)malloc(num_elements * sizeof(float));
-  create_answer_key(a, b, answer_key, n);
-
-  int grid_size = (n + TILE_WIDTH - 1) / TILE_WIDTH;
-  dim3 gridDim(grid_size, grid_size);
-  dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
-
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
@@ -73,7 +56,7 @@ int main() {
   for (int i = 0; i < num_iter; i++) {
     cudaEventRecord(start);
 
-    square_matmul<<<gridDim, blockDim>>>(d_a, d_b, d_c, n);
+    dummy_seq_matmul<<<1, 1>>>(d_a, d_b, d_c, n);
 
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
@@ -83,10 +66,6 @@ int main() {
 
     float elapsed_ms;
     cudaEventElapsedTime(&elapsed_ms, start, stop);
-
-    if (i % verification_gap == 0) {
-      verify_matrix_equality(answer, answer_key, num_elements);
-    }
 
     insert_sorted(times, i, (double)elapsed_ms);
   }
@@ -100,7 +79,6 @@ int main() {
   free(a);
   free(b);
   free(answer);
-  free(answer_key);
 
   print_stats(times, num_iter);
 }

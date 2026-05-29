@@ -3,10 +3,10 @@
 #include "../common/sorted-dynamic-array.h"
 #include "../common/verify-matrix-equality.h"
 #include <cublas_v2.h>
+#include <cuda_runtime.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 __global__ void seq_square_matmul(float *a, float *b, float *c, int N) {
   if (threadIdx.x == 0) {
@@ -53,26 +53,33 @@ int main() {
   float *answer_key = (float *)malloc(num_elements * sizeof(float));
   create_answer_key(a, b, answer_key, n);
 
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
   for (int i = 0; i < num_iter; i++) {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    cudaEventRecord(start);
 
     seq_square_matmul<<<1, 1>>>(d_a, d_b, d_c, n);
 
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float elapsed_ms;
+    cudaEventElapsedTime(&elapsed_ms, start, stop);
+
     if (i % verification_gap == 0) {
       verify_matrix_equality(answer, answer_key, num_elements);
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-
-    double elapsed_ms = (end.tv_sec - start.tv_sec) * 1000.0 +
-                        (end.tv_nsec - start.tv_nsec) / 1000000.0;
-
-    insert_sorted(times, i, elapsed_ms);
+    insert_sorted(times, i, (double)elapsed_ms);
   }
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
 
   cudaFree(d_a);
   cudaFree(d_b);

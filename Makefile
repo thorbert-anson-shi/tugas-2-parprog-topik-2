@@ -9,7 +9,8 @@ COMMON_SRC := $(SRC_DIR)/common/gen-rand-matrix.c \
 
 .PHONY: all clean
 
-all: $(BUILD_DIR)/matmul-tiled $(BUILD_DIR)/matmul-naive $(BUILD_DIR)/matmul-cublas $(BUILD_DIR)/matmul-sequential
+all: $(BUILD_DIR)/matmul-tiled $(BUILD_DIR)/matmul-naive $(BUILD_DIR)/matmul-cublas $(BUILD_DIR)/matmul-sequential \
+     $(BUILD_DIR)/matmul-tiled-comm $(BUILD_DIR)/matmul-naive-comm $(BUILD_DIR)/matmul-cublas-comm $(BUILD_DIR)/matmul-sequential-comm
 
 
 $(BUILD_DIR):
@@ -30,6 +31,19 @@ $(BUILD_DIR)/matmul-sequential: $(SRC_DIR)/sequential/matmul-sequential.cu $(COM
 $(BUILD_DIR)/matmul-cublas: $(SRC_DIR)/cublas/matmul-cublas.cu $(COMMON_SRC) | $(BUILD_DIR)
 	$(NVCC) $(NVCC_FLAGS) -o $@ $^
 
+$(BUILD_DIR)/matmul-naive-comm: $(SRC_DIR)/naive/matmul-global-comm.cu $(COMMON_SRC) | $(BUILD_DIR)
+	$(NVCC) $(NVCC_FLAGS) -o $@ $^
+
+$(BUILD_DIR)/matmul-tiled-comm: $(SRC_DIR)/tiled/matmul-comm.cu $(COMMON_SRC) | $(BUILD_DIR)
+	$(NVCC) $(NVCC_FLAGS) -o $@ $^
+
+$(BUILD_DIR)/matmul-sequential-comm: $(SRC_DIR)/sequential/matmul-sequential-comm.cu $(COMMON_SRC) | $(BUILD_DIR)
+	$(NVCC) $(NVCC_FLAGS) -o $@ $^
+
+$(BUILD_DIR)/matmul-cublas-comm: $(SRC_DIR)/cublas/matmul-cublas-comm.cu $(COMMON_SRC) | $(BUILD_DIR)
+	$(NVCC) $(NVCC_FLAGS) -o $@ $^
+
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -f matmul-tiled matmul-naive matmul-cublas matmul-sequential 
+	rm -f matmul-tiled-comm matmul-naive-comm matmul-cublas-comm matmul-sequential-comm 
