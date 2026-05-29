@@ -14,10 +14,15 @@ BUILD_DIR="build"
 run_bench() {
   local bin="$1"
   local label="$2"
+  local timeout_sec=60
   local trimmed
 
-  trimmed=$("$BUILD_DIR/$bin" <<< "$ITERS
-$N" 2>&1 | grep 'trimmed:' | awk '{print $2}')
+  trimmed=$(timeout "$timeout_sec" "$BUILD_DIR/$bin" <<< "$ITERS
+$N" 2>&1 | grep 'trimmed:' | awk '{print $2}') || true
+
+  if [ -z "$trimmed" ]; then
+    trimmed="TIMEOUT"
+  fi
 
   echo "$label $trimmed"
 }
@@ -34,7 +39,11 @@ variants=("naive" "tiled" "sequential" "cublas")
 for v in "${variants[@]}"; do
   read -r _ total <<< $(run_bench "matmul-${v}" "$v")
   read -r _ comm  <<< $(run_bench "matmul-${v}-comm" "$v-comm")
-  comp=$(echo "$total - $comm" | bc -l)
 
-  printf "%-20s %12.6f %12.6f %12.6f\n" "$v" "$total" "$comm" "$comp"
+  if [ "$total" = "TIMEOUT" ] || [ "$comm" = "TIMEOUT" ]; then
+    printf "%-20s %12s %12s %12s\n" "$v" "TIMEOUT" "TIMEOUT" "TIMEOUT"
+  else
+    comp=$(echo "$total - $comm" | bc -l)
+    printf "%-20s %12.6f %12.6f %12.6f\n" "$v" "$total" "$comm" "$comp"
+  fi
 done
