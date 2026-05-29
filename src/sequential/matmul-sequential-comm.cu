@@ -6,17 +6,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Dummy kernel: same global memory access pattern as sequential matmul,
-// but no multiply-accumulate. Single thread, pure global memory reads.
+// Dummy kernel: same global memory access pattern as sequential matmul.
+// Single thread reads from global memory but does NOT compute — pure global read time.
 __global__ void dummy_seq_matmul(float *a, float *b, float *c, int N) {
   if (threadIdx.x == 0) {
     for (int i = 0; i < N; i++) {
       for (int j = 0; j < N; j++) {
-        float sum = 0.0f;
+        volatile float sink = 0.0f;
         for (int k = 0; k < N; k++) {
-          sum += a[i * N + k] + b[k * N + j];
+          sink = a[i * N + k];
+          sink = b[k * N + j];
         }
-        c[i * N + j] = sum;
+        c[i * N + j] = sink;
       }
     }
   }

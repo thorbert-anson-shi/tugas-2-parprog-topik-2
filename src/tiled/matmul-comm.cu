@@ -8,8 +8,9 @@
 
 #define TILE_WIDTH 32
 
-// Dummy kernel: same global→shared memory access pattern as tiled matmul,
-// but no multiply-accumulate. Measures global→shared transfer time.
+// Dummy kernel: same global→shared memory access pattern as tiled matmul.
+// Loads tiles into shared memory, reads them back, but does NO arithmetic.
+// Measures pure global→shared transfer + shared memory access time.
 __global__ void dummy_matmul(float *a, float *b, float *c, int N) {
   int bx = blockIdx.x;
   int by = blockIdx.y;
@@ -23,7 +24,7 @@ __global__ void dummy_matmul(float *a, float *b, float *c, int N) {
   __shared__ float sh_A[TILE_WIDTH][TILE_WIDTH];
   __shared__ float sh_B[TILE_WIDTH][TILE_WIDTH];
 
-  float value = 0;
+  volatile float sink = 0.0f;
   for (int phase = 0; phase < (N + TILE_WIDTH - 1) / TILE_WIDTH; phase++) {
     if (phase * TILE_WIDTH + tx >= N || i >= N) {
       sh_A[ty][tx] = 0.0f;
@@ -39,14 +40,15 @@ __global__ void dummy_matmul(float *a, float *b, float *c, int N) {
 
     __syncthreads();
 
-    for (int k = 0; k < TILE_WIDTH; k++) {
-      value += sh_A[ty][k] + sh_B[k][tx];
-    }
+    // Read from shared memory but do NOT compute — prevents optimization
+    sink = sh_A[ty][tx];
+    sink = sh_B[ty][tx];
+
     __syncthreads();
   }
 
   if (i < N && j < N) {
-    c[i * N + j] = value;
+    c[i * N + j] = sink;
   }
 }
 

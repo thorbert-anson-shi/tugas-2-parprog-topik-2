@@ -8,8 +8,8 @@
 
 #define TILE_WIDTH 32
 
-// Dummy kernel: same global memory access pattern as naive matmul,
-// but no multiply-accumulate. Purely measures global memory reads.
+// Dummy kernel: same global memory access pattern as naive matmul.
+// Reads from global memory but does NOT compute — measures pure global read time.
 __global__ void dummy_matmul(float *a, float *b, float *c, int N) {
   int bx = blockIdx.x;
   int by = blockIdx.y;
@@ -21,13 +21,14 @@ __global__ void dummy_matmul(float *a, float *b, float *c, int N) {
   int j = bx * blockDim.x + tx;
 
   if (i < N && j < N) {
-    float value = 0;
+    volatile float sink = 0;
 
     for (int k = 0; k < N; k++) {
-      value += a[i * N + k] + b[k * N + j];
+      sink = a[i * N + k];
+      sink = b[k * N + j];
     }
 
-    c[i * N + j] = value;
+    c[i * N + j] = sink;
   }
 }
 

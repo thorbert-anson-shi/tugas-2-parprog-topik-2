@@ -7,8 +7,8 @@
 #include <stdlib.h>
 
 // cuBLAS has no custom kernel to dummy-ify.
-// This benchmarks only the H2D and D2H transfers that cuBLAS matmul uses.
-// The timing window matches the original: H2D copies + D2H copy.
+// This benchmarks only the D2H transfer that cuBLAS matmul uses.
+// The timing window matches the original: D2H copy only.
 // (The original times cublasSgemm + D2H; this removes cublasSgemm.)
 
 int main() {
@@ -35,15 +35,15 @@ int main() {
 
   gen_rand_sq_matrix(a, b, num_elements);
 
+  cudaMemcpy(d_a, a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_b, b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
+
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
 
   for (int i = 0; i < num_iter; i++) {
     cudaEventRecord(start);
-
-    cudaMemcpy(d_a, a, num_elements * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, b, num_elements * sizeof(float), cudaMemcpyHostToDevice);
 
     cudaMemcpy(answer, d_c, num_elements * sizeof(float),
                cudaMemcpyDeviceToHost);
